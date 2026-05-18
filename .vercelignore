@@ -1,0 +1,11 @@
+/vendor
+/node_modules
+/.git
+/storage/*.key
+/.env
+/.env.backup
+/.env.production
+/phpunit.xml
+/tests
+/tests/*
+/database/database.sqlite

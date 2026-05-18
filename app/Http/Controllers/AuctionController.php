@@ -93,7 +93,7 @@ class AuctionController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('auctions', 'public');
+            $imagePath = $request->file('image')->store('auctions');
         }
 
         $auction = Auction::create([

@@ -93,7 +93,23 @@ class AuctionController extends Controller
 
         $imagePath = null;
         if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('auctions');
+            if (env('CLOUDINARY_CLOUD_NAME') && env('CLOUDINARY_CLOUD_NAME') !== 'your_cloud_name') {
+                if (env('CLOUDINARY_URL')) {
+                    \Cloudinary\Configuration\Configuration::instance(env('CLOUDINARY_URL'));
+                } else {
+                    \Cloudinary\Configuration\Configuration::instance([
+                        'cloud' => [
+                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                            'api_key'    => env('CLOUDINARY_API_KEY'),
+                            'api_secret' => env('CLOUDINARY_API_SECRET'),
+                        ],
+                    ]);
+                }
+                $upload = (new \Cloudinary\Api\Upload\UploadApi())->upload($request->file('image')->getRealPath());
+                $imagePath = $upload['secure_url'];
+            } else {
+                $imagePath = $request->file('image')->store('auctions');
+            }
         }
 
         $auction = Auction::create([

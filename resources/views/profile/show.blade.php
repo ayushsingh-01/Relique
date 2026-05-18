@@ -52,7 +52,7 @@
             @forelse($user->auctions as $auction)
                 <div class="card">
                     @if($auction->image_path)
-                        <img src="{{ Storage::url($auction->image_path) }}" alt="{{ $auction->title }}" class="card-img" style="height: 150px;">
+                        <img src="{{ str_starts_with($auction->image_path, 'http') ? $auction->image_path : Storage::url($auction->image_path) }}" alt="{{ $auction->title }}" class="card-img" style="height: 150px;">
                     @else
                         <div class="card-img" style="height: 150px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.875rem;">
                             No Image

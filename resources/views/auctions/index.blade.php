@@ -31,7 +31,7 @@
     @forelse($auctions as $auction)
         <div class="card">
             @if($auction->image_path)
-                <img src="{{ Storage::url($auction->image_path) }}" alt="{{ $auction->title }}" class="card-img">
+                <img src="{{ str_starts_with($auction->image_path, 'http') ? $auction->image_path : Storage::url($auction->image_path) }}" alt="{{ $auction->title }}" class="card-img">
             @else
                 <div class="card-img" style="display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
                     No Image

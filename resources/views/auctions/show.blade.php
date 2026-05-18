@@ -6,7 +6,7 @@
     <!-- Image Section -->
     <div>
         @if($auction->image_path)
-            <img src="{{ Storage::url($auction->image_path) }}" alt="{{ $auction->title }}" style="width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
+            <img src="{{ str_starts_with($auction->image_path, 'http') ? $auction->image_path : Storage::url($auction->image_path) }}" alt="{{ $auction->title }}" style="width: 100%; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);">
         @else
             <div style="width: 100%; height: 400px; background: var(--bg-panel); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
                 No Image Available

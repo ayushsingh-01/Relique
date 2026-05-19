@@ -18,13 +18,15 @@ class BidPlaced implements ShouldBroadcastNow
     public $amount;
     public $buyer_name;
     public $formatted_amount;
+    public $new_end_time;
 
-    public function __construct(Auction $auction, Bid $bid)
+    public function __construct(Auction $auction, Bid $bid, $newEndTime = null)
     {
         $this->auction_id = $auction->id;
         $this->amount = $bid->amount;
         $this->buyer_name = $bid->buyer->name;
         $this->formatted_amount = number_format($bid->amount, 2);
+        $this->new_end_time = $newEndTime ? \Carbon\Carbon::parse($newEndTime)->toIso8601String() : \Carbon\Carbon::parse($auction->end_time)->toIso8601String();
     }
 
     public function broadcastOn(): array

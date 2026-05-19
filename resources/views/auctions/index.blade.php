@@ -52,6 +52,12 @@
                 </div>
                 <div class="card-price">${{ number_format($auction->current_price, 2) }}</div>
                 
+                @if($auction->buy_it_now_price)
+                    <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: -0.5rem; margin-bottom: 1rem;">
+                        Buy It Now: <span style="color: var(--accent-purple); font-weight: 600;">${{ number_format($auction->buy_it_now_price, 2) }}</span>
+                    </div>
+                @endif
+                
                 <p style="color: var(--accent-alert); font-weight: 600; margin-bottom: 1.5rem; font-size: 0.875rem;">
                     Ends: {{ \Carbon\Carbon::parse($auction->end_time)->diffForHumans() }}
                 </p>

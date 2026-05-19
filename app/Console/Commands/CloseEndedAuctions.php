@@ -44,20 +44,39 @@ class CloseEndedAuctions extends Command
 
         foreach ($expiredAuctions as $auction) {
             DB::transaction(function () use ($auction) {
-                // Update the auction status to ended
-                $auction->update(['status' => 'ended']);
-
-                // Find the highest bid
-                $highestBid = $auction->bids()->orderBy('amount', 'desc')->first();
-
-                if ($highestBid) {
-                    $winner = $highestBid->buyer;
-                    $this->info("Auction ID {$auction->id} ended. Winner: {$winner->email}");
-
-                    // Send email to the winner
-                    Mail::to($winner)->send(new AuctionWon($auction, $winner));
+                if (!$auction->has_overtime_started) {
+                    // Transition to overtime
+                    $auction->update([
+                        'has_overtime_started' => true,
+                        'end_time' => now()->addSeconds(60),
+                    ]);
+                    $this->info("Auction ID {$auction->id} entered 60-second overtime.");
+                    
+                    // Broadcast updated auction details
+                    broadcast(new \App\Events\AuctionUpdated($auction));
                 } else {
-                    $this->info("Auction ID {$auction->id} ended with no bids.");
+                    // End the auction
+                    $auction->update(['status' => 'ended']);
+
+                    // Find the highest bid
+                    $highestBid = $auction->bids()->orderBy('amount', 'desc')->first();
+
+                    if ($highestBid) {
+                        $winner = $highestBid->buyer;
+                        $this->info("Auction ID {$auction->id} ended. Winner: {$winner->email}");
+
+                        // Send email to the winner
+                        try {
+                            Mail::to($winner)->send(new AuctionWon($auction, $winner));
+                        } catch (\Exception $e) {
+                            Log::error("Failed sending auction winner email: " . $e->getMessage());
+                        }
+                    } else {
+                        $this->info("Auction ID {$auction->id} ended with no bids.");
+                    }
+
+                    // Broadcast ended status to everyone
+                    broadcast(new \App\Events\AuctionUpdated($auction));
                 }
             });
         }

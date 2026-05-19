@@ -41,12 +41,12 @@
                 ${{ number_format($auction->current_price, 2) }}
             </div>
             
-            <p style="color: var(--accent-alert); font-weight: 600; margin-top: 0.5rem;" id="countdown">
+            <p style="color: var(--accent-alert); font-weight: 600; margin-top: 0.5rem;" id="countdown" data-end-time="{{ \Carbon\Carbon::parse($auction->end_time)->toIso8601String() }}" data-overtime="{{ $auction->has_overtime_started ? '1' : '0' }}">
                 Ends: {{ \Carbon\Carbon::parse($auction->end_time)->format('M d, Y H:i:s') }}
             </p>
         </div>
 
-        @if($auction->status === 'active' && now()->lessThan($auction->end_time))
+        @if($auction->status === 'active' && ($auction->has_overtime_started ? now()->lessThan($auction->end_time) : now()->lessThan($auction->end_time->copy()->addSeconds(60))))
             @auth
                 @if($auction->seller_id !== Auth::id())
                     <form action="{{ route('bids.store', $auction) }}" method="POST" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
@@ -57,7 +57,7 @@
                         <button type="submit" class="btn btn-primary" style="width: 150px;">Place Bid</button>
                     </form>
                     
-                    @if($auction->buy_it_now_price && $auction->bids->count() === 0)
+                    @if($auction->buy_it_now_price)
                         <form action="{{ route('bids.buyItNow', $auction) }}" method="POST" style="margin-bottom: 1rem;">
                             @csrf
                             <button type="submit" class="btn btn-primary" style="width: 100%; background-color: var(--accent-purple); border-color: var(--accent-purple);">
@@ -119,26 +119,232 @@
                     setTimeout(() => priceDiv.style.color = 'var(--accent-primary)', 1000);
                 }
 
+                // Update Timer if new end time is provided
+                if (e.new_end_time) {
+                    const countdownEl = document.getElementById('countdown');
+                    if (countdownEl) {
+                        countdownEl.setAttribute('data-end-time', e.new_end_time);
+                    }
+                }
+
                 // Update Bid History List
                 const historyContainer = document.querySelector('div[style*="max-height: 200px"]');
                 if (historyContainer) {
                     const noBidsMsg = historyContainer.querySelector('p');
                     if (noBidsMsg) noBidsMsg.remove();
 
-                    const newBidHtml = `
-                        <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); background: rgba(16, 185, 129, 0.1); transition: background 1s;">
-                            <span style="color: var(--text-muted);">${e.buyer_name}</span>
-                            <span style="font-weight: 600; color: var(--accent-primary);">$${e.formatted_amount}</span>
-                        </div>
-                    `;
-                    historyContainer.insertAdjacentHTML('afterbegin', newBidHtml);
-                    
-                    // Remove highlight after a second
-                    setTimeout(() => {
-                        historyContainer.firstElementChild.style.background = 'transparent';
-                    }, 1000);
+                    // Check if this bid amount is already displayed to avoid duplicates
+                    const existingBids = Array.from(historyContainer.querySelectorAll('span[style*="font-weight: 600"]'))
+                        .map(span => span.textContent.replace('$', '').trim());
+                    if (!existingBids.includes(parseFloat(e.amount).toFixed(2))) {
+                        const newBidHtml = `
+                            <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); background: rgba(16, 185, 129, 0.1); transition: background 1s;">
+                                <span style="color: var(--text-muted);">${e.buyer_name}</span>
+                                <span style="font-weight: 600; color: var(--accent-primary);">$${e.formatted_amount}</span>
+                            </div>
+                        `;
+                        historyContainer.insertAdjacentHTML('afterbegin', newBidHtml);
+                        
+                        // Remove highlight after a second
+                        setTimeout(() => {
+                            if (historyContainer.firstElementChild) {
+                                historyContainer.firstElementChild.style.background = 'transparent';
+                            }
+                        }, 1000);
+                    }
+                }
+            })
+            .listen('.auction.updated', (e) => {
+                // Update status badge
+                const badge = document.querySelector('.badge');
+                if (badge) {
+                    badge.className = `badge badge-${e.status}`;
+                    badge.innerHTML = e.status.charAt(0).toUpperCase() + e.status.slice(1);
+                }
+
+                // Update end time and overtime attributes
+                const countdownEl = document.getElementById('countdown');
+                if (countdownEl) {
+                    countdownEl.setAttribute('data-end-time', e.end_time);
+                    countdownEl.setAttribute('data-overtime', e.has_overtime_started ? '1' : '0');
+                }
+
+                // Update Current Price Display
+                const priceDiv = document.querySelector('.card-price, div[style*="font-size: 3rem"]');
+                if (priceDiv) {
+                    priceDiv.innerHTML = '$' + e.current_price;
+                }
+
+                // If auction ended, hide forms, display ended alert, and reload after a delay
+                if (e.status === 'ended') {
+                    const forms = document.querySelectorAll('form[action*="bids.store"], form[action*="bids.buyItNow"]');
+                    forms.forEach(f => f.remove());
+
+                    let alertDiv = document.querySelector('.alert-error');
+                    if (!alertDiv) {
+                        const alertHtml = `<div class="alert alert-error" style="text-align: center; margin-bottom: 1rem;">This auction has ended.</div>`;
+                        const detailsPanel = document.querySelector('div[style*="background: var(--bg-panel)"]');
+                        if (detailsPanel) {
+                            const contentAnchor = document.querySelector('h3[style*="margin-top: 3rem"]');
+                            if (contentAnchor) {
+                                contentAnchor.insertAdjacentHTML('beforebegin', alertHtml);
+                            }
+                        }
+                    }
+                    setTimeout(() => window.location.reload(), 2000);
                 }
             });
     }
+
+    // AJAX Bidding Form Submission
+    const bidForm = document.querySelector('form[action*="bids.store"]');
+    if (bidForm) {
+        bidForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const submitBtn = bidForm.querySelector('button[type="submit"]');
+            const amountInput = bidForm.querySelector('input[name="amount"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Placing...';
+
+            const csrfTokenEl = document.querySelector('meta[name="csrf-token"]');
+            const token = csrfTokenEl ? csrfTokenEl.getAttribute('content') : '';
+
+            fetch(bidForm.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token
+                },
+                body: JSON.stringify({
+                    amount: amountInput.value
+                })
+            })
+            .then(response => response.json().then(data => ({ status: response.status, data })))
+            .then(({ status, data }) => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+
+                if (status === 200) {
+                    amountInput.value = '';
+                } else {
+                    if (data.errors && data.errors.amount) {
+                        alert(data.errors.amount[0]);
+                    } else {
+                        alert(data.error || data.message || 'Failed to place bid.');
+                    }
+                }
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                console.error(err);
+                alert('An error occurred while placing the bid.');
+            });
+        });
+    }
+
+    // AJAX Buy It Now Form Submission
+    const buyForm = document.querySelector('form[action*="bids.buyItNow"]');
+    if (buyForm) {
+        buyForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (!confirm('Are you sure you want to buy this item now at the buyout price? This will immediately end the auction.')) return;
+
+            const submitBtn = buyForm.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn.innerHTML;
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = 'Buying...';
+
+            const csrfTokenEl = document.querySelector('meta[name="csrf-token"]');
+            const token = csrfTokenEl ? csrfTokenEl.getAttribute('content') : '';
+
+            fetch(buyForm.action, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': token
+                }
+            })
+            .then(response => response.json().then(data => ({ status: response.status, data })))
+            .then(({ status, data }) => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+
+                if (status === 200) {
+                    alert(data.message || 'Purchased successfully!');
+                    window.location.reload();
+                } else {
+                    alert(data.error || data.message || 'Failed to process buyout.');
+                }
+            })
+            .catch(err => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnText;
+                console.error(err);
+                alert('An error occurred during buyout.');
+            });
+        });
+    }
+
+    // Timer Logic
+    function updateTimer() {
+        const countdownEl = document.getElementById('countdown');
+        if (!countdownEl) return;
+
+        const endTimeStr = countdownEl.getAttribute('data-end-time');
+        const overtimeVal = countdownEl.getAttribute('data-overtime');
+        if (!endTimeStr) return;
+
+        const endTime = new Date(endTimeStr).getTime();
+        const now = new Date().getTime();
+        const distance = endTime - now;
+        const isOvertime = overtimeVal === '1';
+
+        if (distance < 0) {
+            if (!isOvertime) {
+                const secondsPast = Math.floor(Math.abs(distance) / 1000);
+                if (secondsPast < 60) {
+                    const secondsLeft = 60 - secondsPast;
+                    countdownEl.innerHTML = `Overtime: ${secondsLeft}s`;
+                    countdownEl.style.color = '#ef4444';
+                    countdownEl.style.fontSize = '1.25rem';
+                    return;
+                }
+            }
+
+            if (countdownEl.innerHTML !== "Auction Ended") {
+                countdownEl.innerHTML = "Auction Ended";
+                countdownEl.style.color = "var(--text-muted)";
+                const forms = document.querySelectorAll('form[action*="bids.store"], form[action*="bids.buyItNow"]');
+                forms.forEach(f => f.remove());
+                setTimeout(() => window.location.reload(), 2000);
+            }
+            return;
+        }
+
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        if (isOvertime || distance <= 60000) {
+            const secondsLeft = Math.floor(distance / 1000);
+            countdownEl.innerHTML = `Ending in: ${secondsLeft}s`;
+            countdownEl.style.color = '#ef4444';
+            countdownEl.style.fontSize = '1.25rem';
+        } else {
+            countdownEl.innerHTML = `Ends in: ${days}d ${hours}h ${minutes}m ${seconds}s`;
+            countdownEl.style.color = 'var(--accent-alert)';
+            countdownEl.style.fontSize = '1rem';
+        }
+    }
+
+    setInterval(updateTimer, 1000);
+    updateTimer();
 </script>
 @endsection

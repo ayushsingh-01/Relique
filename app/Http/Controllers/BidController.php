@@ -48,7 +48,7 @@ class BidController extends Controller
         }
 
         $request->validate([
-            'amount' => ['required', 'numeric', 'max:99999999', function ($attribute, $value, $fail) use ($auction) {
+            'amount' => ['required', 'numeric', 'max:999999.99', function ($attribute, $value, $fail) use ($auction) {
                 if ($value <= $auction->current_price) {
                     $fail('Your bid must be higher than the current price ($' . $auction->current_price . ').');
                 }

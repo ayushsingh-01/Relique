@@ -23,6 +23,10 @@ class CheckoutController extends Controller
             return back()->with('error', 'This auction has already been paid for.');
         }
 
+        if ($auction->current_price > 999999.99) {
+            return back()->with('error', 'Amounts of $1,000,000.00 or higher cannot be processed via Stripe. Please contact administration for bank wire instructions.');
+        }
+
         if (!class_exists('\Stripe\Stripe')) {
              return back()->with('error', 'Stripe SDK is not installed. Please run "composer require stripe/stripe-php"');
         }

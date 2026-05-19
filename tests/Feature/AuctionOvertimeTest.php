@@ -244,4 +244,55 @@ class AuctionOvertimeTest extends TestCase
             return $mail->hasTo($this->buyer->email);
         });
     }
+
+    public function test_bid_exceeding_maximum_limit_fails_validation(): void
+    {
+        $auction = Auction::create([
+            'seller_id' => $this->seller->id,
+            'category_id' => $this->category->id,
+            'title' => 'Vintage Watch',
+            'description' => 'A fine vintage watch.',
+            'starting_price' => 100,
+            'current_price' => 100,
+            'end_time' => now()->addMinutes(10),
+            'status' => 'active',
+        ]);
+
+        $response = $this->actingAs($this->buyer)
+            ->postJson(route('bids.store', $auction), [
+                'amount' => 1000000.00,
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('amount');
+    }
+
+    public function test_checkout_exceeding_stripe_maximum_limit_redirects_with_error(): void
+    {
+        $auction = Auction::create([
+            'seller_id' => $this->seller->id,
+            'category_id' => $this->category->id,
+            'title' => 'Ultra Rare Car',
+            'description' => 'A very expensive car.',
+            'starting_price' => 1000000.00,
+            'current_price' => 1000000.00,
+            'end_time' => now()->subMinutes(10),
+            'status' => 'ended',
+        ]);
+
+        // Place a winning bid manually in DB to bypass the limit check for the test
+        DB::table('bids')->insert([
+            'auction_id' => $auction->id,
+            'buyer_id' => $this->buyer->id,
+            'amount' => 1000000.00,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($this->buyer)
+            ->get(route('checkout.session', $auction));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('error', 'Amounts of $1,000,000.00 or higher cannot be processed via Stripe. Please contact administration for bank wire instructions.');
+    }
 }

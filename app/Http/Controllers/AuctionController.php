@@ -85,8 +85,8 @@ class AuctionController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'category_id' => 'required|exists:categories,id',
-            'starting_price' => 'required|numeric|min:0.01|max:99999999',
-            'buy_it_now_price' => 'nullable|numeric|min:' . ($request->starting_price + 0.01) . '|max:99999999',
+            'starting_price' => 'required|numeric|min:0.01|max:999999.99',
+            'buy_it_now_price' => 'nullable|numeric|min:' . ($request->starting_price + 0.01) . '|max:999999.99',
             'end_time' => 'required|date|after:now|before:2038-01-01',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);

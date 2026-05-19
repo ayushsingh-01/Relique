@@ -216,7 +216,8 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token
+                    'X-CSRF-TOKEN': token,
+                    ...(window.Echo && window.Echo.socketId() ? { 'X-Socket-Id': window.Echo.socketId() } : {})
                 },
                 body: JSON.stringify({
                     amount: amountInput.value
@@ -267,7 +268,8 @@
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': token
+                    'X-CSRF-TOKEN': token,
+                    ...(window.Echo && window.Echo.socketId() ? { 'X-Socket-Id': window.Echo.socketId() } : {})
                 }
             })
             .then(response => response.json().then(data => ({ status: response.status, data })))

@@ -46,5 +46,19 @@
         
         @yield('content')
     </div>
+    
+    <div id="debug-info" style="background: red; color: white; padding: 10px; font-weight: bold; position: fixed; bottom: 0; right: 0; z-index: 9999;">
+        Pusher type: <span id="pusher-type">loading</span> | Echo status: <span id="echo-status">loading</span>
+    </div>
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                var pusherVal = window.Pusher;
+                var echoVal = window.Echo;
+                document.getElementById('pusher-type').innerText = typeof pusherVal + (pusherVal ? ' (' + pusherVal.name + ')' : '');
+                document.getElementById('echo-status').innerText = echoVal ? 'defined' : 'undefined';
+            }, 500);
+        });
+    </script>
 </body>
 </html>

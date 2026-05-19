@@ -117,3 +117,16 @@ Route::get('/debug-db', function () {
     $auctions = \App\Models\Auction::with('bids.buyer')->get();
     return response()->json($auctions);
 });
+
+Route::get('/debug-broadcast', function () {
+    return response()->json([
+        'default_connection' => config('broadcasting.default'),
+        'pusher_key' => config('broadcasting.connections.pusher.key'),
+        'pusher_cluster' => config('broadcasting.connections.pusher.options.cluster'),
+        'pusher_host' => config('broadcasting.connections.pusher.options.host'),
+        'pusher_port' => config('broadcasting.connections.pusher.options.port'),
+        'pusher_scheme' => config('broadcasting.connections.pusher.options.scheme'),
+        'pusher_app_id' => config('broadcasting.connections.pusher.app_id'),
+        'reverb_app_id' => config('broadcasting.connections.reverb.app_id'),
+    ]);
+});

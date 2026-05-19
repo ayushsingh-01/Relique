@@ -1,6 +1,7 @@
 import Echo from 'laravel-echo';
 
-import Pusher from 'pusher-js';
+import * as PusherModule from 'pusher-js';
+const Pusher = PusherModule.Pusher || PusherModule.default || PusherModule;
 window.Pusher = Pusher;
 
 const pusherKey = document.querySelector('meta[name="pusher-key"]')?.getAttribute('content') || import.meta.env.VITE_PUSHER_APP_KEY;

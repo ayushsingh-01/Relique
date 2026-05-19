@@ -47,17 +47,34 @@
         @yield('content')
     </div>
     
-    <div id="debug-info" style="background: red; color: white; padding: 10px; font-weight: bold; position: fixed; bottom: 0; right: 0; z-index: 9999;">
+    <div id="debug-info" style="background: red; color: white; padding: 10px; font-weight: bold; position: fixed; bottom: 0; right: 0; z-index: 9999; max-width: 400px; max-height: 200px; overflow: auto; font-family: monospace; font-size: 12px; line-height: 1.4;">
         Pusher type: <span id="pusher-type">loading</span> | Echo status: <span id="echo-status">loading</span>
+        <div id="debug-errors" style="margin-top: 5px; border-top: 1px solid rgba(255,255,255,0.3); padding-top: 5px; display: none;"></div>
     </div>
     <script>
+        window.addEventListener('error', function(e) {
+            var errContainer = document.getElementById('debug-errors');
+            errContainer.style.display = 'block';
+            var errDiv = document.createElement('div');
+            errDiv.style.color = '#ffe066';
+            errDiv.innerText = 'Err: ' + e.message + ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')';
+            errContainer.appendChild(errDiv);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            var errContainer = document.getElementById('debug-errors');
+            errContainer.style.display = 'block';
+            var errDiv = document.createElement('div');
+            errDiv.style.color = '#ffb3b3';
+            errDiv.innerText = 'Promise Err: ' + (e.reason ? e.reason.message || e.reason : 'Unknown rejection');
+            errContainer.appendChild(errDiv);
+        });
         window.addEventListener('load', function() {
             setTimeout(function() {
                 var pusherVal = window.Pusher;
                 var echoVal = window.Echo;
                 document.getElementById('pusher-type').innerText = typeof pusherVal + (pusherVal ? ' (' + pusherVal.name + ')' : '');
                 document.getElementById('echo-status').innerText = echoVal ? 'defined' : 'undefined';
-            }, 500);
+            }, 800);
         });
     </script>
 </body>

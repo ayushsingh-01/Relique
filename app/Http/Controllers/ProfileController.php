@@ -34,10 +34,27 @@ class ProfileController extends Controller
         ]);
 
         if ($request->hasFile('avatar')) {
-            if ($user->avatar_path) {
+            if ($user->avatar_path && !str_starts_with($user->avatar_path, 'http')) {
                 Storage::delete($user->avatar_path);
             }
-            $user->avatar_path = $request->file('avatar')->store('avatars');
+
+            if (env('CLOUDINARY_CLOUD_NAME') && env('CLOUDINARY_CLOUD_NAME') !== 'your_cloud_name') {
+                if (env('CLOUDINARY_URL')) {
+                    \Cloudinary\Configuration\Configuration::instance(env('CLOUDINARY_URL'));
+                } else {
+                    \Cloudinary\Configuration\Configuration::instance([
+                        'cloud' => [
+                            'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+                            'api_key'    => env('CLOUDINARY_API_KEY'),
+                            'api_secret' => env('CLOUDINARY_API_SECRET'),
+                        ],
+                    ]);
+                }
+                $upload = (new \Cloudinary\Api\Upload\UploadApi())->upload($request->file('avatar')->getRealPath());
+                $user->avatar_path = $upload['secure_url'];
+            } else {
+                $user->avatar_path = $request->file('avatar')->store('avatars');
+            }
         }
 
         $user->bio = $request->bio;

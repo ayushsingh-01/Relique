@@ -5,7 +5,7 @@
     <!-- Profile Sidebar -->
     <div style="background: var(--bg-panel); padding: 2rem; border-radius: var(--radius-lg); border: 1px solid var(--border-color); text-align: center;">
         @if($user->avatar_path)
-            <img src="{{ Storage::url($user->avatar_path) }}" alt="{{ $user->name }}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 4px solid var(--border-color);">
+            <img src="{{ str_starts_with($user->avatar_path, 'http') ? $user->avatar_path : Storage::url($user->avatar_path) }}" alt="{{ $user->name }}" style="width: 150px; height: 150px; border-radius: 50%; object-fit: cover; margin-bottom: 1.5rem; border: 4px solid var(--border-color);">
         @else
             <div style="width: 150px; height: 150px; border-radius: 50%; background: var(--bg-dark); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 3rem; margin: 0 auto 1.5rem auto; border: 4px solid var(--border-color);">
                 {{ strtoupper(substr($user->name, 0, 1)) }}

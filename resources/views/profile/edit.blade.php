@@ -10,7 +10,7 @@
 
         <div class="form-group" style="text-align: center; margin-bottom: 2rem;">
             @if($user->avatar_path)
-                <img src="{{ Storage::url($user->avatar_path) }}" alt="{{ $user->name }}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 1rem; border: 3px solid var(--border-color);">
+                <img src="{{ str_starts_with($user->avatar_path, 'http') ? $user->avatar_path : Storage::url($user->avatar_path) }}" alt="{{ $user->name }}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin-bottom: 1rem; border: 3px solid var(--border-color);">
             @endif
             <div>
                 <label class="form-label">Profile Picture</label>
